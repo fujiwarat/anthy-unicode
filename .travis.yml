@@ -1,0 +1,72 @@
+language: c
+compiler: gcc
+os: linux
+
+# Require gettext-0.19.8
+dist: focal
+
+branches:
+  only:
+  - master
+
+arch:
+  - amd64
+  #- ppc64le
+  #- s390x
+  #- arm64
+
+addons:
+  apt:
+    packages:
+    # For autogen.sh
+    - autopoint
+    # For make from
+    # https://packages.ubuntu.com/search?searchon=sourcenames&keywords=ibus-anthy
+    - gettext
+    - pkg-config
+    - emacs
+    - xemacs
+
+jobs:
+  include:
+  - name: Build
+    before_script:
+    - sudo apt-get -qq update
+    env:
+    - LD_LIBRARY_PATH="$PWD/src-main/.libs:$PWD/src-worddic/.libs"
+    - CONFFILE="$PWD/test.conf"
+    script:
+    - set -e
+    - git config pull.rebase false
+    - git pull --depth=200
+    # configure options from
+    # https://salsa.debian.org/debian/ibus-anthy/-/blob/master/debian/rules
+    - >
+      ./autogen.sh
+      --enable-installed-tests
+      --disable-static
+    # Set the cutom DESTDIR because the default DESTDIR
+    # /home/travis/bulid/fujiwarat/$PKG/ibus/ibus-$VERSION/_inst seems to be
+    # too long and failed to set DESTDIR to install bindings/pygobject/IBus.py
+    - >
+      make
+      VERBOSE=1
+      DESTDIR="$HOME/build/$USER/dest"
+    - >
+      sed -e "s|@datadir@|$PWD|" -e "s|@PACKAGE@|mkanthydic|"
+      anthy-unicode.conf.in > test.conf
+    - echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    - echo "CONFFILE=$CONFFILE"
+    - cd test
+    - ./anthy --all
+    - ./checklib
+    - cd ../src-util
+    - ./anthy-dic-tool-unicode --load dic-tool-input
+    - diff $HOME/.config/anthy/private_words_default dic-tool-result
+    - ./anthy-dic-tool-unicode --dump
+    - mkdir -p $HOME/.anthy
+    - mv $HOME/.config/anthy/private_words_default $HOME/.anthy
+    - ./anthy-dic-tool-unicode --migrate
+    - diff $HOME/.config/anthy/private_words_default dic-tool-result
+    - cd ..
+
