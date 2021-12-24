@@ -24,8 +24,8 @@ addons:
     # https://packages.ubuntu.com/search?searchon=sourcenames&keywords=ibus-anthy
     - gettext
     - pkg-config
-    - emacs
-    - xemacs
+    - emacs-el
+    - xemacs21-supportel
 
 jobs:
   include:
