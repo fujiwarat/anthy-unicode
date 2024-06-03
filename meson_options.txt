@@ -1,0 +1,11 @@
+option('emacs',
+  type: 'string',
+  value: '',
+  description: 'emacs command for compiling lisp files (no to disable)'
+)
+
+option('lispdir',
+  type: 'string',
+  value: '',
+  description: 'path to emacs lisp-site install directory (no to disable)'
+)

@@ -207,6 +207,7 @@ main(int argc, char* argv[])
   int i;
   const char *prefix = "..";
   const char *prev_arg = "";
+  const char *dic_out  = DIC_NAME;
 
   struct header_entry entries[] = {
     {"word_dic", "/mkworddic/anthy.wdic"},
@@ -222,12 +223,15 @@ main(int argc, char* argv[])
     if (!strcmp("-p", prev_arg)) {
       prefix = argv[i];
     }
+    if (!strcmp("-o", prev_arg)) {
+      dic_out = argv[i];
+    }
     /**/
     prev_arg = argv[i];
   }
   printf("file name prefix=[%s] you can change this by -p option.\n", prefix);
 
-  create_file_dic(DIC_NAME, prefix,
+  create_file_dic(dic_out, prefix,
 		  sizeof(entries)/sizeof(struct header_entry),
 		  entries);
 

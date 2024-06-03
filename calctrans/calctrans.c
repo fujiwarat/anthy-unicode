@@ -377,10 +377,12 @@ convert_line(FILE *ofp, char *buf)
 
 static void
 convert_file(FILE       *ifp,
-             const char *ifn)
+             const char *ifn,
+             const char *output_dir)
 {
   char buf[1024];
   FILE *ofp = NULL;
+  char *fn = NULL;
   while (fgets(buf, 1024, ifp)) {
     /**/
     if (buf[0] == '#') {
@@ -388,12 +390,22 @@ convert_file(FILE       *ifp,
     }
     if (!strncmp("section", buf, 7)) {
       int w, n, i;
-      char fn[1024];
+      char file_name[1024];
       if (ofp) {
 	fclose(ofp);
 	ofp = NULL;
       }
-      sscanf(buf, "section %s %d %d", fn, &w, &n);
+      if (fn) {
+        free(fn);
+        fn = NULL;
+      }
+      sscanf(buf, "section %s %d %d", file_name, &w, &n);
+      fn = malloc(strlen(output_dir) + strlen(file_name) + 4);
+      if (!fn) {
+        fprintf(stderr, "Failed malloc in %s:%d\n", __FILE__, __LINE__);
+        abort();
+      }
+      sprintf(fn, "%s/%s", output_dir, file_name);
       ofp = fopen(fn, "w");
       if (!ofp) {
 	fprintf(stderr, "failed to open (%s)\n", fn);
@@ -415,10 +427,13 @@ convert_file(FILE       *ifp,
   if (ofp) {
     fclose(ofp);
   }
+  if (fn) {
+    free(fn);
+  }
 }
 
 static void
-convert_data(int nr_fn, char **fns)
+convert_data(int nr_fn, char **fns, const char *output_dir)
 {
   FILE *ifp;
   int i;
@@ -429,7 +444,7 @@ convert_data(int nr_fn, char **fns)
       fprintf(stderr, "failed to open (%s)\n", fns[i]);
       continue;
     }
-    convert_file(ifp, fns[i]);
+    convert_file(ifp, fns[i], output_dir);
     fclose(ifp);
   }
 }
@@ -707,6 +722,7 @@ main(int argc, char **argv)
   int i;
   int nr_input = 0;
   char **input_files;
+  const char *output_dir = ".";
   int convert = 0;
   int extract = 0;
 
@@ -723,6 +739,9 @@ main(int argc, char **argv)
       if (!ofp) {
 	fprintf(stderr, "failed to open (%s)\n", argv[i+1]);
       }
+      i ++;
+    } else if (!strcmp(arg, "-d")) {
+      output_dir = argv[i+1];
       i ++;
     } else if (!strcmp(arg, "-c") ||
 	       !strcmp(arg, "--convert")) {
@@ -752,7 +771,7 @@ main(int argc, char **argv)
   }
   if (convert) {
     printf(" -- converting dictionary from text to binary form\n");
-    convert_data(nr_input, input_files);
+    convert_data(nr_input, input_files, output_dir);
   }
   free(input_files);
 

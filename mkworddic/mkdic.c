@@ -1174,10 +1174,10 @@ execute_batch(struct mkdic_stat *mds, const char *fn)
 
 /* 辞書生成のための変数の初期化 */
 static void
-init_mds(struct mkdic_stat *mds)
+init_mds(struct mkdic_stat *mds, char *output)
 {
   int i;
-  mds->output_fn = DEFAULT_FN;
+  mds->output_fn = output;
   mds->ud = NULL;
 
   /* 単語辞書を初期化する */
@@ -1239,12 +1239,9 @@ main(int argc, char **argv)
   struct mkdic_stat mds;
   int i;
   char *script_fn = NULL;
+  char *out_fn = DEFAULT_FN;
   int help_mode = 0;
   int retval;
-
-  anthy_init_wtypes();
-  init_libs();
-  init_mds(&mds);
 
   for (i = 1; i < argc; i++) {
     char *arg = argv[i];
@@ -1255,11 +1252,18 @@ main(int argc, char **argv)
     if (!strcmp(prev_arg, "-f")) {
       script_fn = arg;
     }
+    if (!strcmp(prev_arg, "-o")) {
+      out_fn = arg;
+    }
   }
 
   if (help_mode || !script_fn) {
     print_usage();
   }
+
+  anthy_init_wtypes();
+  init_libs();
+  init_mds(&mds, out_fn);
 
   retval = execute_batch(&mds, script_fn);
   free_yomi_entry_list(&mds.yl);

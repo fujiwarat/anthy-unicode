@@ -477,8 +477,10 @@ write_file(const char* file_name)
 }
 
 int 
-main(void)
+main(int argc, char **argv)
 {
+  int i;
+  const char *out_fn = "anthy.dep";
   /* 付属語辞書を読み込んでファイルに書き出す */
   anthy_conf_override("CONFFILE", "../anthy-unicode.conf");
   anthy_conf_override("ANTHYDIR", SRCDIR "/../depgraph/");
@@ -490,7 +492,15 @@ main(void)
   /* 自立語からの遷移表 */
   init_indep_word_seq_tab();
 
-  write_file("anthy.dep");
+  for (i = 1; i < argc; i++) {
+    char *arg = argv[i];
+    char *prev_arg = argv[i-1];
+    if (!strcmp(prev_arg, "-o")) {
+      out_fn = arg;
+    }
+  }
+
+  write_file(out_fn);
 
   return 0;
 }

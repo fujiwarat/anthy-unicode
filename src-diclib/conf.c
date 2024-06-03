@@ -250,7 +250,8 @@ anthy_do_conf_init(void)
       add_val("CONFFILE", CONF_DIR"/anthy-unicode.conf");
     }
     pw = getpwuid(getuid());
-    add_val("HOME", pw->pw_dir);
+    if (pw)
+      add_val("HOME", pw->pw_dir);
     alloc_session_id();
     read_conf_file();
     confIsInit = 1;
