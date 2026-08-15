@@ -1465,7 +1465,7 @@ save_a_row(FILE *fp, struct record_stat* rst,
       fprintf(fp, "%d ", val->u.val);
       break;
     default:
-      anthy_log(0, "Faild to save an unkonwn record. (in record.c)\n");
+      anthy_log(0, "Failed to save an unkonwn record. (in record.c)\n");
       break;
     }
   }
