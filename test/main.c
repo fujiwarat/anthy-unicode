@@ -105,7 +105,7 @@ check_cond(struct condition *cond, struct input *in)
 static void
 log_print(int lv, const char *msg)
 {
-  printf("log:%d:%s\n", lv, msg);
+  fprintf(stderr, "log:%d:%s\n", lv, msg);
 }
 
 static anthy_context_t
@@ -118,8 +118,8 @@ init_lib(int use_utf8)
   anthy_conf_override("DIC_FILE", "../mkanthydic/anthy.dic");
   anthy_set_logger(log_print, 0);
   if (anthy_init()) {
-    printf("failed to init anthy\n");
-    exit(0);
+    fprintf(stderr, "failed to init anthy\n");
+    exit(EXIT_FAILURE);
   }
   anthy_set_personality("");
 
@@ -303,7 +303,7 @@ save_db(const char *fn, struct res_db *db)
   FILE *fp = fopen(fn, "w");
   struct conv_res *cr;
   if (!fp) {
-    printf("failed to open (%s) to write\n", fn);
+    fprintf(stderr, "failed to open (%s) to write\n", fn);
     return ;
   }
   for (cr = db->res_list.next; cr; cr = cr->next) {
@@ -394,8 +394,8 @@ main(int argc,char **argv)
 
   fp = fopen(testdata, "r");
   if (!fp) {
-    printf("failed to open %s.\n", testdata);
-    return 0;
+    fprintf(stderr, "failed to open %s.\n", testdata);
+    return EXIT_FAILURE;
   }
   free(testdata);
   
@@ -429,5 +429,5 @@ main(int argc,char **argv)
   show_stat(db);
   save_db(expdata, db);
 
-  return 0;
+  return EXIT_SUCCESS;
 }

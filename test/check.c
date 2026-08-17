@@ -16,8 +16,8 @@ init(void)
   anthy_conf_override("DIC_FILE", "../mkanthydic/anthy.dic");
   res = anthy_init();
   if (res) {
-    printf("failed to init\n");
-    return 1;
+    fprintf(stderr, "failed to init\n");
+    return EXIT_FAILURE;
   }
   anthy_quit();
   /* init again */
@@ -26,10 +26,10 @@ init(void)
   anthy_conf_override("DIC_FILE", "../mkanthydic/anthy.dic");
   res = anthy_init();
   if (res) {
-    printf("failed to init\n");
-    return 1;
+    fprintf(stderr, "failed to init\n");
+    return EXIT_FAILURE;
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 static int
@@ -38,11 +38,11 @@ test0(void)
   anthy_context_t ac;
   ac = anthy_create_context();
   if (!ac) {
-    printf("failed to create context\n");
-    return 1;
+    fprintf(stderr, "failed to create context\n");
+    return EXIT_FAILURE;
   }
   anthy_release_context(ac);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 static int
@@ -53,8 +53,8 @@ test1(void)
   xstr *xs, *xs2;
   ac = anthy_create_context();
   if (!ac) {
-    printf("failed to create context\n");
-    return 1;
+    fprintf(stderr, "failed to create context\n");
+    return EXIT_FAILURE;
   }
   anthy_context_set_encoding (ac, ANTHY_UTF8_ENCODING);
   anthy_xstr_set_print_encoding (ANTHY_UTF8_ENCODING);
@@ -77,7 +77,7 @@ test1(void)
   anthy_putxstrln(xs2);
   anthy_free_xstr(xs);
   anthy_free_xstr(xs2);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 /* compliant_rand:
@@ -90,7 +90,7 @@ compliant_rand(void)
 {
   struct timespec ts = { 0, };
   if (!timespec_get (&ts, TIME_UTC)) {
-    printf("Failed timespec_get\n");
+    fprintf(stderr, "Failed timespec_get\n");
     assert(0);
   }
   return ts.tv_nsec;
@@ -103,8 +103,8 @@ shake_test(const char *str)
   anthy_context_t ac;
   ac = anthy_create_context();
   if (!ac) {
-    printf("failed to create context\n");
-    return 1;
+    fprintf(stderr, "failed to create context\n");
+    return EXIT_FAILURE;
   }
   anthy_context_set_encoding(ac, ANTHY_UTF8_ENCODING);
   anthy_set_string(ac, str);
@@ -117,28 +117,33 @@ shake_test(const char *str)
     anthy_resize_segment(ac, nth, rsz);
   }
   anthy_release_context(ac);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int
 main(int argc, char **argv)
 {
+  int ret;
   (void)argc;
   (void)argv;
+  ret = EXIT_SUCCESS;
   printf("checking\n");
   if (init()) {
-    printf("fail (init)\n");
-    return 0;
+    fprintf(stderr, "fail (init)\n");
+    return EXIT_FAILURE;
   }
   if (test0()) {
-    printf("fail (test0)\n");
+    fprintf(stderr, "fail (test0)\n");
+    ret = EXIT_FAILURE;
   }
   if (test1()) {
-    printf("fail (test1)\n");
+    fprintf(stderr, "fail (test1)\n");
+    ret = EXIT_FAILURE;
   }
   if (shake_test("あいうえおかきくけこ")) {
-    printf("fail (shake_test)\n");
+    fprintf(stderr, "fail (shake_test)\n");
+    ret = EXIT_FAILURE;
   }
   printf("done\n");
-  return 0;
+  return ret;
 }
