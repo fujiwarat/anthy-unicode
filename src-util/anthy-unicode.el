@@ -1,4 +1,4 @@
-;;; anthy-unicode.el -- Anthy
+;;; anthy-unicode.el -- Anthy  -*- lexical-binding: nil -*-
 
 ;; Copyright (C) 2001 - 2007 KMC(Kyoto University Micro Computer Club)
 ;; Copyright (C) 2021 Takao Fujiwara <takao.fujiwara1@gmail.com>
@@ -70,12 +70,45 @@
 (defvar anthy-agent-unicode-command-list '("anthy-agent-unicode")
   "anthy-agent-unicodeのPATH 名")
 
+;; XEmacs にしか無い名前。anthy-xemacs が真のときしか呼ばないが、直接書くと
+;; GNU Emacs の byte compiler が "not known to be defined" と言う。
+(defvar anthy-event-matches-key-specifier-p-function
+  'event-matches-key-specifier-p)
+(defvar anthy-event-to-character-function 'event-to-character)
+(defvar anthy-char-to-int-function 'char-to-int)
+
+;; XEmacs には set-process-query-on-exit-flag が無い。持っているのは
+;; process-kill-without-query で、第二引数 nil で「終了時に問い合わせない」
+;; になるのは同じ。
+(defvar anthy-set-process-no-query-function
+  (if (fboundp 'set-process-query-on-exit-flag)
+      'set-process-query-on-exit-flag
+    'process-kill-without-query))
+
+;; deactivate-* は Emacs 24.3 での改名。Emacs 23 以前と XEmacs は
+;; inactivate-* しか持たない。名前は二つ同時に変わったので、片方だけ
+;; 直しても症状は同じ。
+(defvar anthy-deactivate-input-method-function
+  (if (fboundp 'deactivate-input-method)
+      'deactivate-input-method
+    'inactivate-input-method))
+(defvar anthy-deactivate-current-input-method-variable
+  (if (boundp 'deactivate-current-input-method-function)
+      'deactivate-current-input-method-function
+    'inactivate-current-input-method-function))
+
+;; Emacs 24.3 までは set-face-underline-p の方が正で、set-face-underline は
+;; その obsolete な別名。24.3 で入れ替わる。XEmacs は -p しか持たない。
+(defvar anthy-set-face-underline-function
+  (if (fboundp 'set-face-underline)
+      'set-face-underline
+    'set-face-underline-p))
+
 ;; face
 (defvar anthy-highlight-face nil)
 (defvar anthy-underline-face nil)
 (copy-face 'highlight 'anthy-highlight-face)
-(if (not (featurep 'xemacs))
-    (set-face-underline 'anthy-highlight-face t))
+(funcall anthy-set-face-underline-function 'anthy-highlight-face t)
 (copy-face 'underline 'anthy-underline-face)
 
 ;;
@@ -83,7 +116,12 @@
   (if (featurep 'xemacs)
       t nil))
 (if anthy-xemacs
-    (require 'overlay))
+    ;; overlay は XEmacs 本体には無く、fsf-compat package が持っている。
+    ;; 素の file-error では何を入れればよいか分からないので名前を言う。
+    (condition-case nil
+	(require 'overlay)
+      (error
+       (error "anthy-unicode: XEmacs needs the fsf-compat package for overlay"))))
 ;;
 (defvar anthy-mode-map nil
   "AnthyのASCIIモードのキーマップ")
@@ -202,6 +240,9 @@
 (anthy-deflocalvar anthy-current-rkmap "hiragana")
 ; undo
 (anthy-deflocalvar anthy-buffer-undo-list-saved nil)
+;; 待避した undo list そのもの。旗だけ buffer local で中身が global だったので、
+;; buffer を二つ使うと片方の履歴がもう片方のもので上書きされていた。
+(anthy-deflocalvar anthy-buffer-undo-list nil)
 
 ;;
 (defvar anthy-wide-space "　" "スペースを押した時に出て来る文字")
@@ -546,14 +587,17 @@
 	  (char-to-string ch)
 	nil))))
 
-(defun anthy-restore-undo-list (commit-str)
-  (let* ((len (length commit-str))
-	 (beginning (point))
-	 (end (+ beginning len)))
-    (setq buffer-undo-list
-	  (cons (cons beginning end)
-		(cons nil anthy-saved-buffer-undo-list)))
-	 ))
+;; 呼び出し側も、anthy-saved-buffer-undo-list を設定する二箇所も、元から
+;; コメントアウトされている。この関数だけが生きていて、呼べば void-variable に
+;; なる。同じように閉じておく。
+;(defun anthy-restore-undo-list (commit-str)
+;  (let* ((len (length commit-str))
+;	 (beginning (point))
+;	 (end (+ beginning len)))
+;    (setq buffer-undo-list
+;	  (cons (cons beginning end)
+;		(cons nil anthy-saved-buffer-undo-list)))
+;	 ))
 
 (defun anthy-proc-agent-reply (repl)
   (let*
@@ -752,7 +796,7 @@
 	(if anthy-agent-unicode-process
 	    (kill-process anthy-agent-unicode-process))
 	(setq anthy-agent-unicode-process proc)
-	(set-process-query-on-exit-flag proc nil)
+	(funcall anthy-set-process-no-query-function proc nil)
 ;;	(if anthy-xemacs
 ;;	    (if (coding-system-p (find-coding-system 'euc-japan))
 ;;		(set-process-coding-system proc 'euc-japan 'euc-japan))
@@ -871,7 +915,8 @@
 ;; leim の activate
 ;;
 (defun anthy-unicode-leim-activate (&optional name)
-  (setq deactivate-current-input-method-function 'anthy-unicode-leim-inactivate)
+  (set anthy-deactivate-current-input-method-variable
+       'anthy-unicode-leim-inactivate)
   (setq anthy-leim-active-p t)
   (anthy-update-mode)
   (when (eq (selected-window) (minibuffer-window))
@@ -881,7 +926,7 @@
 ;; emacsのバグ避けらしいです
 ;;
 (defun anthy-unicode-leim-exit-from-minibuffer ()
-  (deactivate-input-method)
+  (funcall anthy-deactivate-input-method-function)
   (when (<= (minibuffer-depth) 1)
     (remove-hook 'minibuffer-exit-hook 'anthy-unicode-leim-exit-from-minibuffer)))
 
@@ -894,11 +939,12 @@
   (if anthy-xemacs
       (let ((event last-command-event))
 	(cond
-	 ((event-matches-key-specifier-p event 'left)      2)
-	 ((event-matches-key-specifier-p event 'right)     6)
-	 ((event-matches-key-specifier-p event 'backspace) 8)
+	 ((funcall anthy-event-matches-key-specifier-p-function event 'left)      2)
+	 ((funcall anthy-event-matches-key-specifier-p-function event 'right)     6)
+	 ((funcall anthy-event-matches-key-specifier-p-function event 'backspace) 8)
 	 (t
-	  (char-to-int (event-to-character event)))))
+	  (funcall anthy-char-to-int-function
+		   (funcall anthy-event-to-character-function event)))))
     last-command-event))
 
 ;;
